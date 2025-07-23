@@ -22,9 +22,3 @@ export const borderRadius = {
   button: "6px",
   full: "30px",
 } as const;
-
-export const theme = {
-  colors,
-  fontSize,
-  borderRadius,
-};

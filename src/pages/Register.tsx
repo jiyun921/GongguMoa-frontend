@@ -14,10 +14,11 @@ import {
 } from "../components/icons";
 import { colors } from "../styles/theme";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Register = () => {
   const navigate = useNavigate();
 
-  // 사용자 입력 상태
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -28,14 +29,11 @@ const Register = () => {
   const [agreed, setAgreed] = useState(false);
   const [showAgreementDetail, setShowAgreementDetail] = useState(false);
 
-  // 중복확인 성공 여부
   const [emailChecked, setEmailChecked] = useState(false);
   const [phoneChecked, setPhoneChecked] = useState(false);
-
-  // 에러 메시지 관리
+  const [nicknameChecked, setNicknameChecked] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // 프론트 유효성 검사 함수들
   const isValidPassword = (pw: string) =>
     /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,16}$/.test(pw);
   const isValidNickname = (nick: string) =>
@@ -48,105 +46,125 @@ const Register = () => {
       Number(date.slice(6, 8))
     ) <= new Date();
   const isValidName = (text: string) => /^[가-힣]{1,}$/.test(text);
-
   const isValidPhone = (num: string) => /^\d{10,11}$/.test(num);
   const isValidEmail = (email: string) => /.+@.+\..+/.test(email);
 
-  // 전체 유효성 검사
   const isFormValid =
     isValidEmail(email) &&
     isValidPassword(password) &&
     password === passwordConfirm &&
-    name &&
+    isValidName(name) &&
     isValidPhone(phone) &&
     isValidNickname(nickname) &&
     isValidBirthdate(birthdate) &&
     agreed &&
     emailChecked &&
-    phoneChecked;
+    phoneChecked &&
+    nicknameChecked;
 
-  // 이메일 중복 확인 요청
   const checkEmail = async () => {
-    const res = await fetch("/api/check-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      setErrors((prev) => ({ ...prev, email: data.message }));
+    const url = `${
+      import.meta.env.VITE_API_URL
+    }/api/users/check-email?email=${encodeURIComponent(email)}`;
+    console.log("✅ checkEmail 요청 URL:", url); // 디버깅용
+
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      // JSON 파싱 전에 상태 체크
+      const contentType = res.headers.get("content-type");
+      if (!contentType?.includes("application/json")) {
+        throw new Error("서버가 JSON이 아닌 응답을 반환했습니다.");
+      }
+
+      const data = await res.json();
+
+      if (res.ok && data.code === 20000) {
+        setErrors((prev) => ({ ...prev, email: "" }));
+        setEmailChecked(true);
+      } else {
+        setErrors((prev) => ({ ...prev, email: data.message }));
+        setEmailChecked(false);
+      }
+    } catch (err) {
+      console.error("❌ checkEmail 에러:", err);
+      setErrors((prev) => ({ ...prev, email: "네트워크 오류" }));
       setEmailChecked(false);
-    } else {
-      setErrors((prev) => ({ ...prev, email: "" }));
-      setEmailChecked(true);
     }
   };
 
-  // 전화번호 중복 확인 요청
   const checkPhone = async () => {
-    const res = await fetch("/api/check-phone", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      setErrors((prev) => ({ ...prev, phone: data.message }));
+    try {
+      const res = await fetch(
+        `${API_URL}/api/users/check-phone?phone=${encodeURIComponent(phone)}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setErrors((prev) => ({ ...prev, phone: "" }));
+        setPhoneChecked(true);
+      } else {
+        setErrors((prev) => ({ ...prev, phone: data.message }));
+        setPhoneChecked(false);
+      }
+    } catch (err) {
+      console.error("checkPhone 에러:", err);
+      setErrors((prev) => ({ ...prev, phone: "네트워크 오류" }));
       setPhoneChecked(false);
-    } else {
-      setErrors((prev) => ({ ...prev, phone: "" }));
-      setPhoneChecked(true);
     }
   };
 
-  // 회원가입 제출 처리
+  const checkNickname = async () => {
+    // API 없으면 로컬 체크만
+    if (isValidNickname(nickname)) {
+      setErrors((prev) => ({ ...prev, nickname: "" }));
+      setNicknameChecked(true);
+    } else {
+      setErrors((prev) => ({ ...prev, nickname: "닉네임 형식 오류" }));
+      setNicknameChecked(false);
+    }
+  };
+
   const handleRegister = async () => {
     if (!isFormValid) return;
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        password,
-        name,
-        birthdate,
-        phone,
-        nickname,
-      }),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      switch (data.code) {
-        case 60000:
-          alert("필수 입력 항목이 누락되었습니다.");
-          break;
-        case 60003:
-          setErrors((prev) => ({ ...prev, password: data.message }));
-          break;
-        case 60004:
-          setErrors((prev) => ({ ...prev, email: data.message }));
-          break;
-        case 60005:
-          setErrors((prev) => ({ ...prev, phone: data.message }));
-          break;
-        case 60006:
-          setErrors((prev) => ({ ...prev, nickname: data.message }));
-          break;
-        case 60007:
-          setErrors((prev) => ({ ...prev, birthdate: data.message }));
-          break;
-        case 60008:
-          setErrors((prev) => ({ ...prev, birthdate: data.message }));
-          break;
-        case 60009:
-          setErrors((prev) => ({ ...prev, passwordConfirm: data.message }));
-          break;
-        default:
-          alert(data.message);
+
+    try {
+      const res = await fetch(`${API_URL}/api/users/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          birthdate: `${birthdate.slice(0, 4)}-${birthdate.slice(
+            4,
+            6
+          )}-${birthdate.slice(6, 8)}`,
+          phoneNumber: phone,
+          nickname,
+        }),
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert("회원가입 성공!");
+        navigate("/login");
+      } else {
+        alert(data.message || "회원가입 실패");
       }
-    } else {
-      alert("회원가입 성공!");
-      navigate("/login");
+    } catch (err) {
+      console.error("handleRegister 에러:", err);
+      alert("네트워크 오류");
     }
   };
 
@@ -225,6 +243,8 @@ const Register = () => {
               placeholder="2~8자리 닉네임 입력 (영문 또는 한글)"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
+              buttonText="중복확인"
+              onButtonClick={checkNickname}
               isError={!!errors.nickname}
               iconColor={isValidNickname(nickname) ? colors.primary : undefined}
             />
