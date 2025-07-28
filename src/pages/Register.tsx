@@ -20,6 +20,7 @@ const Register = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
+  const [emailChecked, setEmailChecked] = useState(false);
   const [authCode, setAuthCode] = useState("");
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [password, setPassword] = useState("");
@@ -63,6 +64,28 @@ const Register = () => {
     agreed &&
     phoneChecked &&
     nicknameChecked;
+  
+  const checkEmailDuplicate = async () => {
+    try {
+      const { data } = await api.get(`/api/users/check-email`, {
+        params: { email },
+      });
+      if (data.code === 20000) {
+        setEmailChecked(true);
+        setErrors((prev) => ({ ...prev, email: "" }));
+        alert("사용 가능한 이메일입니다.");
+      } else {
+        setEmailChecked(false);
+        setErrors((prev) => ({ ...prev, email: data.message }));
+      }
+    } catch (err: any) {
+      setEmailChecked(false);
+      setErrors((prev) => ({
+        ...prev,
+        email: err.response?.data?.message || "중복 확인 실패",
+      }));
+    }
+  };
 
   const sendAuthCode = async () => {
     if (isSendingAuth) return; // 중복 방지
@@ -178,9 +201,14 @@ const Register = () => {
               type="email"
               placeholder="이메일 입력"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              buttonText="인증번호"
-              onButtonClick={sendAuthCode}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailChecked(false); 
+                setShowAuthInput(false);     
+                setIsEmailVerified(false);  
+              }}
+              buttonText={emailChecked ? "인증번호" : "중복확인"}
+              onButtonClick={emailChecked ? sendAuthCode : checkEmailDuplicate}
               isError={!!errors.email}
               iconColor={isEmailVerified ? colors.primary : undefined}
               disabled={!isValidEmail(email) || isSendingAuth}
@@ -236,7 +264,10 @@ const Register = () => {
               type="text"
               placeholder="휴대전화번호 입력"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneChecked(false); 
+              }}
               buttonText="중복확인"
               onButtonClick={checkPhone}
               isError={!!errors.phone}
@@ -250,7 +281,10 @@ const Register = () => {
               type="text"
               placeholder="2~8자리 닉네임 입력 (영문 또는 한글)"
               value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
+              onChange={(e) => {
+                setNickname(e.target.value);
+                setNicknameChecked(false);
+              }}
               buttonText="중복확인"
               onButtonClick={checkNickname}
               isError={!!errors.nickname}
