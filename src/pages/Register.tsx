@@ -13,8 +13,7 @@ import {
   ProfileIcon,
 } from "../components/icons";
 import { colors } from "../styles/theme";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import api from "../api/axios";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -34,6 +33,7 @@ const Register = () => {
   const [nicknameChecked, setNicknameChecked] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  // 유효성 검증 함수들
   const isValidPassword = (pw: string) =>
     /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,16}$/.test(pw);
   const isValidNickname = (nick: string) =>
@@ -62,30 +62,13 @@ const Register = () => {
     phoneChecked &&
     nicknameChecked;
 
+  // ✅ 이메일 중복 체크
   const checkEmail = async () => {
-    const url = `${
-      import.meta.env.VITE_API_URL
-    }/api/users/check-email?email=${encodeURIComponent(email)}`;
-    console.log("✅ checkEmail 요청 URL:", url); // 디버깅용
-
     try {
-      const res = await fetch(url, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-        },
+      const { data } = await api.get(`/api/users/check-email`, {
+        params: { email },
       });
-
-      // JSON 파싱 전에 상태 체크
-      const contentType = res.headers.get("content-type");
-      if (!contentType?.includes("application/json")) {
-        throw new Error("서버가 JSON이 아닌 응답을 반환했습니다.");
-      }
-
-      const data = await res.json();
-
-      if (res.ok && data.code === 20000) {
+      if (data.code === 20000) {
         setErrors((prev) => ({ ...prev, email: "" }));
         setEmailChecked(true);
       } else {
@@ -99,17 +82,13 @@ const Register = () => {
     }
   };
 
+  // ✅ 전화번호 중복 체크
   const checkPhone = async () => {
     try {
-      const res = await fetch(
-        `${API_URL}/api/users/check-phone?phone=${encodeURIComponent(phone)}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const { data } = await api.get(`/api/users/check-phone`, {
+        params: { phone },
+      });
+      if (data.success) {
         setErrors((prev) => ({ ...prev, phone: "" }));
         setPhoneChecked(true);
       } else {
@@ -117,14 +96,14 @@ const Register = () => {
         setPhoneChecked(false);
       }
     } catch (err) {
-      console.error("checkPhone 에러:", err);
+      console.error("❌ checkPhone 에러:", err);
       setErrors((prev) => ({ ...prev, phone: "네트워크 오류" }));
       setPhoneChecked(false);
     }
   };
 
+  // ✅ 닉네임 중복 체크
   const checkNickname = async () => {
-    // API 없으면 로컬 체크만
     if (isValidNickname(nickname)) {
       setErrors((prev) => ({ ...prev, nickname: "" }));
       setNicknameChecked(true);
@@ -134,36 +113,30 @@ const Register = () => {
     }
   };
 
+  // ✅ 회원가입 처리
   const handleRegister = async () => {
     if (!isFormValid) return;
-
     try {
-      const res = await fetch(`${API_URL}/api/users/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          name,
-          birthdate: `${birthdate.slice(0, 4)}-${birthdate.slice(
-            4,
-            6
-          )}-${birthdate.slice(6, 8)}`,
-          phoneNumber: phone,
-          nickname,
-        }),
-        credentials: "include",
+      const { data } = await api.post(`/api/users/signup`, {
+        email,
+        password,
+        name,
+        birthdate: `${birthdate.slice(0, 4)}-${birthdate.slice(
+          4,
+          6
+        )}-${birthdate.slice(6, 8)}`,
+        phoneNumber: phone,
+        nickname,
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      if (data.success) {
         alert("회원가입 성공!");
         navigate("/login");
       } else {
         alert(data.message || "회원가입 실패");
       }
     } catch (err) {
-      console.error("handleRegister 에러:", err);
+      console.error("❌ handleRegister 에러:", err);
       alert("네트워크 오류");
     }
   };
