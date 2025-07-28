@@ -19,6 +19,8 @@ const Register = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
+  const [authCode, setAuthCode] = useState("");
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [name, setName] = useState("");
@@ -27,13 +29,10 @@ const Register = () => {
   const [nickname, setNickname] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [showAgreementDetail, setShowAgreementDetail] = useState(false);
-
-  const [emailChecked, setEmailChecked] = useState(false);
   const [phoneChecked, setPhoneChecked] = useState(false);
   const [nicknameChecked, setNicknameChecked] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // 유효성 검증 함수들
   const isValidPassword = (pw: string) =>
     /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,16}$/.test(pw);
   const isValidNickname = (nick: string) =>
@@ -51,6 +50,7 @@ const Register = () => {
 
   const isFormValid =
     isValidEmail(email) &&
+    isEmailVerified &&
     isValidPassword(password) &&
     password === passwordConfirm &&
     isValidName(name) &&
@@ -58,31 +58,44 @@ const Register = () => {
     isValidNickname(nickname) &&
     isValidBirthdate(birthdate) &&
     agreed &&
-    emailChecked &&
     phoneChecked &&
     nicknameChecked;
 
-  // ✅ 이메일 중복 체크
-  const checkEmail = async () => {
+  const sendAuthCode = async () => {
     try {
-      const { data } = await api.get(`/api/users/check-email`, {
-        params: { email },
-      });
-      if (data.code === 20000) {
+      const { data } = await api.post("/api/users/email-code", { email });
+      if (data.success) {
+        alert("인증번호가 이메일로 발송되었습니다.");
         setErrors((prev) => ({ ...prev, email: "" }));
-        setEmailChecked(true);
       } else {
         setErrors((prev) => ({ ...prev, email: data.message }));
-        setEmailChecked(false);
       }
     } catch (err) {
-      console.error("❌ checkEmail 에러:", err);
+      console.error("sendAuthCode 에러:", err);
       setErrors((prev) => ({ ...prev, email: "네트워크 오류" }));
-      setEmailChecked(false);
     }
   };
 
-  // ✅ 전화번호 중복 체크
+  const verifyAuthCode = async () => {
+    try {
+      const { data } = await api.post("/api/users/check-emailcode", {
+        email,
+        code: authCode,
+      });
+      if (data.success) {
+        setIsEmailVerified(true);
+        alert("이메일 인증이 완료되었습니다.");
+      } else {
+        alert(data.message || "인증 실패");
+        setIsEmailVerified(false);
+      }
+    } catch (err) {
+      console.error("verifyAuthCode 에러:", err);
+      alert("네트워크 오류");
+      setIsEmailVerified(false);
+    }
+  };
+
   const checkPhone = async () => {
     try {
       const { data } = await api.get(`/api/users/check-phone`, {
@@ -96,13 +109,12 @@ const Register = () => {
         setPhoneChecked(false);
       }
     } catch (err) {
-      console.error("❌ checkPhone 에러:", err);
+      console.error("checkPhone 에러:", err);
       setErrors((prev) => ({ ...prev, phone: "네트워크 오류" }));
       setPhoneChecked(false);
     }
   };
 
-  // ✅ 닉네임 중복 체크
   const checkNickname = async () => {
     if (isValidNickname(nickname)) {
       setErrors((prev) => ({ ...prev, nickname: "" }));
@@ -113,7 +125,6 @@ const Register = () => {
     }
   };
 
-  // ✅ 회원가입 처리
   const handleRegister = async () => {
     if (!isFormValid) return;
     try {
@@ -136,7 +147,7 @@ const Register = () => {
         alert(data.message || "회원가입 실패");
       }
     } catch (err) {
-      console.error("❌ handleRegister 에러:", err);
+      console.error("handleRegister 에러:", err);
       alert("네트워크 오류");
     }
   };
@@ -146,7 +157,6 @@ const Register = () => {
       <BackLogoNav />
       <Container>
         <Box>
-          {/* 이메일 & 비밀번호 */}
           <InputGroup>
             <FormInput
               icon={<EmailIcon />}
@@ -154,11 +164,22 @@ const Register = () => {
               placeholder="이메일 입력"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              buttonText="중복확인"
-              onButtonClick={checkEmail}
+              buttonText="인증번호 받기"
+              onButtonClick={sendAuthCode}
               isError={!!errors.email}
-              iconColor={emailChecked ? colors.primary : undefined}
+              iconColor={isEmailVerified ? colors.primary : undefined}
             />
+            {!isEmailVerified && (
+              <FormInput
+                icon={<EmailIcon />}
+                type="text"
+                placeholder="인증번호 입력"
+                value={authCode}
+                onChange={(e) => setAuthCode(e.target.value)}
+                buttonText="확인"
+                onButtonClick={verifyAuthCode}
+              />
+            )}
             <FormInput
               icon={<PasswordIcon />}
               type="password"
@@ -184,7 +205,6 @@ const Register = () => {
             />
           </InputGroup>
 
-          {/* 이름, 전화번호 */}
           <InputGroup>
             <FormInput
               icon={<NicknameIcon />}
@@ -208,7 +228,6 @@ const Register = () => {
             />
           </InputGroup>
 
-          {/* 닉네임, 생일 */}
           <InputGroup>
             <FormInput
               icon={<ProfileIcon />}
@@ -233,7 +252,6 @@ const Register = () => {
             />
           </InputGroup>
 
-          {/* 이용약관 동의 */}
           <InputGroup>
             <AgreementWrapper>
               <div
@@ -272,7 +290,6 @@ const Register = () => {
             </AgreementWrapper>
           </InputGroup>
 
-          {/* 회원가입 버튼 */}
           <Button disabled={!isFormValid} onClick={handleRegister}>
             회원가입
           </Button>

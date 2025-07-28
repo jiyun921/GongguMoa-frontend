@@ -11,7 +11,7 @@ import {
   InputGroup,
 } from "../styles/common";
 import { Button, TextButtonWrapper, TextButton } from "../styles/button";
-import api from "../api/axios"; // ✅ axios 공통 인스턴스 사용
+import api from "../api/axios";
 
 const Logo = styled.img`
   width: 160px;
@@ -23,12 +23,10 @@ const Logo = styled.img`
 const Login = () => {
   const navigate = useNavigate();
 
-  // ✅ 입력값 관리
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // ✅ 로그인 처리 함수
   const handleLogin = async () => {
     if (!emailOrPhone || !password) {
       setError("이메일/전화번호와 비밀번호를 입력해주세요.");
@@ -37,7 +35,7 @@ const Login = () => {
 
     try {
       const { data } = await api.post("/api/users/login", {
-        identifier: emailOrPhone, // 백엔드에서 이메일/전화번호 겸용 필드라면
+        identifier: emailOrPhone, // 백엔드에서 이메일,전화번호 겸용 필드면
         password,
       });
 
@@ -48,7 +46,7 @@ const Login = () => {
         setError(data.message || "로그인 실패");
       }
     } catch (err) {
-      console.error("❌ 로그인 에러:", err);
+      console.error("로그인 에러:", err);
       setError("네트워크 오류");
     }
   };
