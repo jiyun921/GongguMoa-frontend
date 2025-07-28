@@ -15,6 +15,7 @@ interface FormInputProps {
   errorBorderRadius?: string;
   isValid?: boolean;
   iconColor?: string;
+  disabled?: boolean;
 }
 
 const FormInput = ({
@@ -28,6 +29,7 @@ const FormInput = ({
   isError,
   errorBorderRadius,
   iconColor,
+  disabled,
 }: FormInputProps) => {
   const borderStyle = isError
     ? {
@@ -46,7 +48,17 @@ const FormInput = ({
         onChange={onChange}
       />
       {buttonText && (
-        <SmallButton onClick={onButtonClick}>{buttonText}</SmallButton>
+        <SmallButton
+          onClick={onButtonClick}
+          disabled={disabled}
+          style={
+            disabled
+              ? { background: "#e0e0e0", color: "#aaa", cursor: "not-allowed" }
+              : {}
+          }
+        >
+          {buttonText}
+        </SmallButton>
       )}
     </InputWrapper>
   );

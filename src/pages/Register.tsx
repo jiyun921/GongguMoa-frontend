@@ -6,6 +6,7 @@ import { Container, Box, InputGroup, AgreementWrapper } from "../styles/common";
 import { Button, TextButtonWrapper, TextButton } from "../styles/button";
 import {
   EmailIcon,
+  CheckIcon,
   PasswordIcon,
   NicknameIcon,
   BirthdateIcon,
@@ -32,6 +33,8 @@ const Register = () => {
   const [phoneChecked, setPhoneChecked] = useState(false);
   const [nicknameChecked, setNicknameChecked] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [showAuthInput, setShowAuthInput] = useState(false);
+  const [isSendingAuth, setIsSendingAuth] = useState(false);
 
   const isValidPassword = (pw: string) =>
     /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,16}$/.test(pw);
@@ -62,17 +65,22 @@ const Register = () => {
     nicknameChecked;
 
   const sendAuthCode = async () => {
+    if (isSendingAuth) return; // 중복 방지
+    setIsSendingAuth(true);
     try {
       const { data } = await api.post("/api/users/email-code", { email });
       if (data.success) {
         alert("인증번호가 이메일로 발송되었습니다.");
         setErrors((prev) => ({ ...prev, email: "" }));
+        setShowAuthInput(true); // 인증번호 입력 칸 보이기
       } else {
         setErrors((prev) => ({ ...prev, email: data.message }));
       }
     } catch (err) {
       console.error("sendAuthCode 에러:", err);
       setErrors((prev) => ({ ...prev, email: "네트워크 오류" }));
+    } finally {
+      setIsSendingAuth(false);
     }
   };
 
@@ -164,12 +172,13 @@ const Register = () => {
               placeholder="이메일 입력"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              buttonText="인증번호 받기"
+              buttonText="인증번호"
               onButtonClick={sendAuthCode}
               isError={!!errors.email}
               iconColor={isEmailVerified ? colors.primary : undefined}
+              disabled={!isValidEmail(email) || isSendingAuth}
             />
-            {!isEmailVerified && (
+            {showAuthInput && !isEmailVerified && (
               <FormInput
                 icon={<EmailIcon />}
                 type="text"
