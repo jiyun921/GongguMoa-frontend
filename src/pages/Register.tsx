@@ -135,6 +135,7 @@ const Register = () => {
       if (data.code === 20000) {
         setErrors((prev) => ({ ...prev, phone: "" }));
         setPhoneChecked(true);
+        alert("사용 가능한 전화번호입니다.");
       } else {
         setErrors((prev) => ({ ...prev, phone: data.message }));
         setPhoneChecked(false);
@@ -154,6 +155,7 @@ const Register = () => {
       if (data.code === 20000) {
         setErrors((prev) => ({ ...prev, nickname: "" }));
         setNicknameChecked(true);
+        alert("사용 가능한 닉네임입니다.");
       } else {
         setErrors((prev) => ({ ...prev, nickname: data.message }));
         setNicknameChecked(false);
