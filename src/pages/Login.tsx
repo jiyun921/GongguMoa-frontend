@@ -39,7 +39,7 @@ const Login = () => {
         password,
       });
 
-      if (data.success) {
+      if (data.code=20000) {
         alert("로그인 성공!");
         navigate("/"); // 로그인 후 메인 페이지 이동
       } else {
