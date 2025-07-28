@@ -180,7 +180,7 @@ const Register = () => {
             />
             {showAuthInput && !isEmailVerified && (
               <FormInput
-                icon={<EmailIcon />}
+                icon={<CheckIcon />}
                 type="text"
                 placeholder="인증번호 입력"
                 value={authCode}
