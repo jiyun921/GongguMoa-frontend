@@ -69,7 +69,7 @@ const Register = () => {
     setIsSendingAuth(true);
     try {
       const { data } = await api.post("/api/users/email-code", { email });
-      if (data.success) {
+      if (data.code === 20000) {
         alert("인증번호가 이메일로 발송되었습니다.");
         setErrors((prev) => ({ ...prev, email: "" }));
         setShowAuthInput(true); // 인증번호 입력 칸 보이기
