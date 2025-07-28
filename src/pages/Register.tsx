@@ -90,7 +90,7 @@ const Register = () => {
         email,
         code: authCode,
       });
-      if (data.success) {
+      if (data.code === 20000) {
         setIsEmailVerified(true);
         alert("이메일 인증이 완료되었습니다.");
       } else {
@@ -109,7 +109,7 @@ const Register = () => {
       const { data } = await api.get(`/api/users/check-phone`, {
         params: { phone },
       });
-      if (data.success) {
+      if (data.code === 20000) {
         setErrors((prev) => ({ ...prev, phone: "" }));
         setPhoneChecked(true);
       } else {
@@ -124,11 +124,20 @@ const Register = () => {
   };
 
   const checkNickname = async () => {
-    if (isValidNickname(nickname)) {
-      setErrors((prev) => ({ ...prev, nickname: "" }));
-      setNicknameChecked(true);
-    } else {
-      setErrors((prev) => ({ ...prev, nickname: "닉네임 형식 오류" }));
+    try {
+      const { data } = await api.get(`/api/users/check-nickname`, {
+        params: { nickname },
+      });
+      if (data.code === 20000) {
+        setErrors((prev) => ({ ...prev, nickname: "" }));
+        setNicknameChecked(true);
+      } else {
+        setErrors((prev) => ({ ...prev, nickname: data.message }));
+        setNicknameChecked(false);
+      }
+    } catch (err) {
+      console.error("checkNickname 에러:", err);
+      setErrors((prev) => ({ ...prev, nickname: "네트워크 오류" }));
       setNicknameChecked(false);
     }
   };
@@ -139,16 +148,14 @@ const Register = () => {
       const { data } = await api.post(`/api/users/signup`, {
         email,
         password,
+        passwordConfirm,
         name,
-        birthdate: `${birthdate.slice(0, 4)}-${birthdate.slice(
-          4,
-          6
-        )}-${birthdate.slice(6, 8)}`,
+        birthdate,
         phoneNumber: phone,
         nickname,
       });
 
-      if (data.success) {
+      if (data.code === 20000) {
         alert("회원가입 성공!");
         navigate("/login");
       } else {
