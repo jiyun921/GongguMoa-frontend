@@ -39,15 +39,19 @@ const Login = () => {
         password,
       });
 
-      if (data.success) {
+      if (data.code=20000) {
         alert("로그인 성공!");
         navigate("/"); // 로그인 후 메인 페이지 이동
       } else {
         setError(data.message || "로그인 실패");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("로그인 에러:", err);
-      setError("네트워크 오류");
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("네트워크 오류. 다시 시도해주세요.");
+      }
     }
   };
 

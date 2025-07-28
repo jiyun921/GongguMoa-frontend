@@ -20,6 +20,7 @@ const Register = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
+  const [emailChecked, setEmailChecked] = useState(false);
   const [authCode, setAuthCode] = useState("");
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [password, setPassword] = useState("");
@@ -63,6 +64,28 @@ const Register = () => {
     agreed &&
     phoneChecked &&
     nicknameChecked;
+  
+  const checkEmailDuplicate = async () => {
+    try {
+      const { data } = await api.get(`/api/users/check-email`, {
+        params: { email },
+      });
+      if (data.code === 20000) {
+        setEmailChecked(true);
+        setErrors((prev) => ({ ...prev, email: "" }));
+        alert("사용 가능한 이메일입니다.");
+      } else {
+        setEmailChecked(false);
+        setErrors((prev) => ({ ...prev, email: data.message }));
+      }
+    } catch (err: any) {
+      setEmailChecked(false);
+      setErrors((prev) => ({
+        ...prev,
+        email: err.response?.data?.message || "중복 확인 실패",
+      }));
+    }
+  };
 
   const sendAuthCode = async () => {
     if (isSendingAuth) return; // 중복 방지
@@ -76,9 +99,9 @@ const Register = () => {
       } else {
         setErrors((prev) => ({ ...prev, email: data.message }));
       }
-    } catch (err) {
+    } catch (err : any) {
       console.error("sendAuthCode 에러:", err);
-      setErrors((prev) => ({ ...prev, email: "네트워크 오류" }));
+      setErrors((prev) => ({ ...prev, email: err.response?.data?.message }));
     } finally {
       setIsSendingAuth(false);
     }
@@ -90,16 +113,16 @@ const Register = () => {
         email,
         code: authCode,
       });
-      if (data.success) {
+      if (data.code === 20000) {
         setIsEmailVerified(true);
         alert("이메일 인증이 완료되었습니다.");
       } else {
         alert(data.message || "인증 실패");
         setIsEmailVerified(false);
       }
-    } catch (err) {
+    } catch (err : any) {
       console.error("verifyAuthCode 에러:", err);
-      alert("네트워크 오류");
+      alert(err.response?.data?.message);
       setIsEmailVerified(false);
     }
   };
@@ -109,26 +132,35 @@ const Register = () => {
       const { data } = await api.get(`/api/users/check-phone`, {
         params: { phone },
       });
-      if (data.success) {
+      if (data.code === 20000) {
         setErrors((prev) => ({ ...prev, phone: "" }));
         setPhoneChecked(true);
       } else {
         setErrors((prev) => ({ ...prev, phone: data.message }));
         setPhoneChecked(false);
       }
-    } catch (err) {
+    } catch (err :any) {
       console.error("checkPhone 에러:", err);
-      setErrors((prev) => ({ ...prev, phone: "네트워크 오류" }));
+      setErrors((prev) => ({ ...prev, phone: err.response?.data?.message }));
       setPhoneChecked(false);
     }
   };
 
   const checkNickname = async () => {
-    if (isValidNickname(nickname)) {
-      setErrors((prev) => ({ ...prev, nickname: "" }));
-      setNicknameChecked(true);
-    } else {
-      setErrors((prev) => ({ ...prev, nickname: "닉네임 형식 오류" }));
+    try {
+      const { data } = await api.get(`/api/users/check-nickname`, {
+        params: { nickname },
+      });
+      if (data.code === 20000) {
+        setErrors((prev) => ({ ...prev, nickname: "" }));
+        setNicknameChecked(true);
+      } else {
+        setErrors((prev) => ({ ...prev, nickname: data.message }));
+        setNicknameChecked(false);
+      }
+    } catch (err :any) {
+      console.error("checkNickname 에러:", err);
+      setErrors((prev) => ({ ...prev, nickname: err.response?.data?.message}));
       setNicknameChecked(false);
     }
   };
@@ -139,24 +171,22 @@ const Register = () => {
       const { data } = await api.post(`/api/users/signup`, {
         email,
         password,
+        passwordConfirm,
         name,
-        birthdate: `${birthdate.slice(0, 4)}-${birthdate.slice(
-          4,
-          6
-        )}-${birthdate.slice(6, 8)}`,
+        birthdate,
         phoneNumber: phone,
         nickname,
       });
 
-      if (data.success) {
+      if (data.code === 20000) {
         alert("회원가입 성공!");
         navigate("/login");
       } else {
         alert(data.message || "회원가입 실패");
       }
-    } catch (err) {
+    } catch (err : any) {
       console.error("handleRegister 에러:", err);
-      alert("네트워크 오류");
+      alert(err.response?.data?.message);
     }
   };
 
@@ -171,9 +201,14 @@ const Register = () => {
               type="email"
               placeholder="이메일 입력"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              buttonText="인증번호"
-              onButtonClick={sendAuthCode}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailChecked(false); 
+                setShowAuthInput(false);     
+                setIsEmailVerified(false);  
+              }}
+              buttonText={emailChecked ? "인증번호" : "중복확인"}
+              onButtonClick={emailChecked ? sendAuthCode : checkEmailDuplicate}
               isError={!!errors.email}
               iconColor={isEmailVerified ? colors.primary : undefined}
               disabled={!isValidEmail(email) || isSendingAuth}
@@ -229,7 +264,10 @@ const Register = () => {
               type="text"
               placeholder="휴대전화번호 입력"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneChecked(false); 
+              }}
               buttonText="중복확인"
               onButtonClick={checkPhone}
               isError={!!errors.phone}
@@ -243,7 +281,10 @@ const Register = () => {
               type="text"
               placeholder="2~8자리 닉네임 입력 (영문 또는 한글)"
               value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
+              onChange={(e) => {
+                setNickname(e.target.value);
+                setNicknameChecked(false);
+              }}
               buttonText="중복확인"
               onButtonClick={checkNickname}
               isError={!!errors.nickname}
