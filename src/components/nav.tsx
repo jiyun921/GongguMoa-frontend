@@ -30,8 +30,6 @@ export const BackLogoNav = () => {
 };
 
 export const LogoMyNav = () => {
-  const navigate = useNavigate();
-
   return (
     <NavBar>
       <NavLogo src={logo} alt="로고" />
