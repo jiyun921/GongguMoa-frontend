@@ -45,9 +45,13 @@ const Login = () => {
       } else {
         setError(data.message || "로그인 실패");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("로그인 에러:", err);
-      setError("네트워크 오류");
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("네트워크 오류. 다시 시도해주세요.");
+      }
     }
   };
 

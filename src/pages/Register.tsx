@@ -76,9 +76,9 @@ const Register = () => {
       } else {
         setErrors((prev) => ({ ...prev, email: data.message }));
       }
-    } catch (err) {
+    } catch (err : any) {
       console.error("sendAuthCode 에러:", err);
-      setErrors((prev) => ({ ...prev, email: "네트워크 오류" }));
+      setErrors((prev) => ({ ...prev, email: err.response?.data?.message }));
     } finally {
       setIsSendingAuth(false);
     }
@@ -97,9 +97,9 @@ const Register = () => {
         alert(data.message || "인증 실패");
         setIsEmailVerified(false);
       }
-    } catch (err) {
+    } catch (err : any) {
       console.error("verifyAuthCode 에러:", err);
-      alert("네트워크 오류");
+      alert(err.response?.data?.message);
       setIsEmailVerified(false);
     }
   };
@@ -116,9 +116,9 @@ const Register = () => {
         setErrors((prev) => ({ ...prev, phone: data.message }));
         setPhoneChecked(false);
       }
-    } catch (err) {
+    } catch (err :any) {
       console.error("checkPhone 에러:", err);
-      setErrors((prev) => ({ ...prev, phone: "네트워크 오류" }));
+      setErrors((prev) => ({ ...prev, phone: err.response?.data?.message }));
       setPhoneChecked(false);
     }
   };
@@ -135,9 +135,9 @@ const Register = () => {
         setErrors((prev) => ({ ...prev, nickname: data.message }));
         setNicknameChecked(false);
       }
-    } catch (err) {
+    } catch (err :any) {
       console.error("checkNickname 에러:", err);
-      setErrors((prev) => ({ ...prev, nickname: "네트워크 오류" }));
+      setErrors((prev) => ({ ...prev, nickname: err.response?.data?.message}));
       setNicknameChecked(false);
     }
   };
@@ -161,9 +161,9 @@ const Register = () => {
       } else {
         alert(data.message || "회원가입 실패");
       }
-    } catch (err) {
+    } catch (err : any) {
       console.error("handleRegister 에러:", err);
-      alert("네트워크 오류");
+      alert(err.response?.data?.message);
     }
   };
 
