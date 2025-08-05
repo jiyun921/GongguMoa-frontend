@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Container, Box, InputGroup } from "../styles/common";
 import FormInput from "../components/formInput";
 import { BackLogoNav } from "../components/nav";
@@ -14,39 +14,57 @@ declare global {
 }
 
 const Location = () => {
-  const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const [address, setAddress] = useState("");
   const [distance, setDistance] = useState(500);
   const [savedLocation, setSavedLocation] = useState<string | null>(null);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
 
   useEffect(() => {
-    if (!window.kakao || !mapRef.current) return;
-
-    const kakao = window.kakao;
-    const mapInstance = new kakao.maps.Map(mapRef.current, {
-      center: new kakao.maps.LatLng(37.5407626, 127.0793423), // 건국대학교
-      level: 3,
-    });
-
-    new kakao.maps.Marker({
-      map: mapInstance,
-      position: new kakao.maps.LatLng(37.5407626, 127.0793423),
-    });
-
-    setMap(mapInstance);
-
-    // 백엔드에서 저장된 위치 불러오기
-    (async () => {
-      try {
-        const { data } = await api.get("/api/users/saved-location");
-        if (data?.location) {
-          setSavedLocation(data.location); // ex. "서울특별시 광진구 능동로 120"
+    const loadKakaoMap = () => {
+      if (!window.kakao || !window.kakao.maps) return;
+      const kakao = window.kakao;
+      const mapContainer = document.getElementById("map");
+      // mapContainer가 null이어도 지도 생성 시도 (강제)
+      const mapInstance = new kakao.maps.Map(mapContainer, {
+        center: new kakao.maps.LatLng(37.5407626, 127.0793423),
+        level: 3,
+      });
+      new kakao.maps.Marker({
+        map: mapInstance,
+        position: new kakao.maps.LatLng(37.5407626, 127.0793423),
+      });
+      setMap(mapInstance);
+      setIsMapLoaded(true);
+      (async () => {
+        try {
+          const { data } = await api.get("/api/users/saved-location");
+          if (data?.location) setSavedLocation(data.location);
+        } catch (err) {
+          console.error("저장된 위치 불러오기 실패:", err);
         }
-      } catch (err) {
-        console.error("저장된 위치 불러오기 실패:", err);
-      }
-    })();
+      })();
+    };
+
+    if (window.kakao && window.kakao.maps) {
+      loadKakaoMap();
+    } else {
+      const script = document.createElement("script");
+      script.src =
+        "https://dapi.kakao.com/v2/maps/sdk.js?appkey=c82c2da92bb86f7431f2e093d32d2026&libraries=services";
+      script.async = true;
+      document.head.appendChild(script);
+
+      script.onload = () => {
+        // window.kakao.maps가 생길 때까지 polling
+        const interval = setInterval(() => {
+          if (window.kakao && window.kakao.maps) {
+            clearInterval(interval);
+            loadKakaoMap();
+          }
+        }, 100);
+      };
+    }
   }, []);
 
   const searchAddress = () => {
@@ -57,27 +75,30 @@ const Location = () => {
         const coords = new window.kakao.maps.LatLng(result[0].y, result[0].x);
         new window.kakao.maps.Marker({ map, position: coords });
         map.setCenter(coords);
+      } else {
+        alert("주소를 찾을 수 없습니다.");
       }
     });
   };
 
   const findMyLocation = () => {
+    // isMapLoaded 체크 제거, 무조건 실행
     if (!navigator.geolocation) {
       alert("이 브라우저에서는 위치 정보를 지원하지 않습니다.");
       return;
     }
-
+    if (!map || !window.kakao || !window.kakao.maps) {
+      alert("지도가 아직 준비되지 않았습니다.");
+      return;
+    }
     navigator.geolocation.getCurrentPosition((pos) => {
       const { latitude, longitude } = pos.coords;
       const coords = new window.kakao.maps.LatLng(latitude, longitude);
-
       new window.kakao.maps.Marker({
         map,
         position: coords,
       });
-
       map.setCenter(coords);
-
       const geocoder = new window.kakao.maps.services.Geocoder();
       geocoder.coord2Address(
         coords.getLng(),
@@ -96,7 +117,6 @@ const Location = () => {
       <BackLogoNav />
       <Container>
         <Box>
-          {/* 위치 입력 */}
           <InputGroup>
             <FormInput
               icon={<LocationIcon />}
@@ -111,15 +131,14 @@ const Location = () => {
             />
           </InputGroup>
 
-          {/* 현재 위치 버튼 */}
           <Button
             style={{ width: "100%", margin: "0 0" }}
             onClick={findMyLocation}
+            // disabled={!isMapLoaded} // 비활성화 제거
           >
             현재 위치로 찾기
           </Button>
 
-          {/* 거리 설정 + 저장된 위치 */}
           <div style={{ margin: "12px", fontSize: "14px" }}>
             <div style={{ marginBottom: "8px" }}>
               저장된 위치:{" "}
@@ -132,7 +151,7 @@ const Location = () => {
               value={distance}
               onChange={(e) => setDistance(Number(e.target.value))}
               style={{
-                padding: "0px 0px",
+                padding: "6px 10px",
                 borderRadius: "6px",
                 border: "1px solid #ccc",
               }}
@@ -146,9 +165,8 @@ const Location = () => {
             </select>
           </div>
 
-          {/* 지도 */}
           <div
-            ref={mapRef}
+            id="map"
             style={{ width: "100%", height: "400px", borderRadius: "12px" }}
           />
         </Box>
