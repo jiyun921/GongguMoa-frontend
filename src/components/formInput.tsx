@@ -15,7 +15,8 @@ interface FormInputProps {
   errorBorderRadius?: string;
   isValid?: boolean;
   iconColor?: string;
-  disabled?: boolean;
+  disabled?: boolean
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }
 
 const FormInput = ({
@@ -30,6 +31,7 @@ const FormInput = ({
   errorBorderRadius,
   iconColor,
   disabled,
+  onKeyDown,
 }: FormInputProps) => {
   const borderStyle = isError
     ? {
@@ -46,6 +48,8 @@ const FormInput = ({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        onKeyDown={onKeyDown}
+        disabled={disabled}
       />
       {buttonText && (
         <SmallButton

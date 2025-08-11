@@ -39,9 +39,11 @@ const Login = () => {
         password,
       });
 
-      if (data.code=20000) {
+      if (data.code===20000) {
+        localStorage.setItem("accessToken", data.data.accessToken);
+        localStorage.setItem("refreshToken", data.data.refreshToken);
         alert("로그인 성공!");
-        navigate("/"); // 로그인 후 메인 페이지 이동
+        navigate("/location"); // 로그인 후 메인 페이지 이동
       } else {
         setError(data.message || "로그인 실패");
       }
